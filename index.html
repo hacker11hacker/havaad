@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>הוועד - ביקורת עמיתים על עבודות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=Heebo:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===== Masthead ===== -->
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="brand">
+      <span class="brand-mark">הוועד</span>
+      <span class="brand-tagline">ביקורת עמיתים, בלי ליטופים</span>
+    </div>
+    <div class="auth-area" id="auth-area">
+      <div id="g_id_signin_container"></div>
+    </div>
+  </div>
+  <div class="masthead-rule"></div>
+</header>
+
+<!-- ===== Hero ===== -->
+<section class="hero">
+  <p class="eyebrow">כתב עת דיגיטלי לחוות דעת // גיליון פתוח</p>
+  <h1 class="hero-title">תעלה עבודה.<br>תקבל חוות דעת אמיתית.</h1>
+  <p class="hero-sub">טקסטים, עיצובים, מערכות - כל דבר שרוצים עליו זווית שנייה. חברי הוועד מדרגים בכוכבים וכותבים למה.</p>
+  <div class="hero-actions">
+    <button class="btn btn-primary" id="btn-open-create">הגש עבודה לביקורת</button>
+    <a href="#feed" class="btn btn-ghost">עיין בעבודות שהוגשו</a>
+  </div>
+</section>
+
+<!-- ===== Feed ===== -->
+<main id="feed" class="feed-section">
+  <div class="feed-header">
+    <h2 class="section-title">על שולחן הוועד</h2>
+    <span class="feed-count" id="feed-count"></span>
+  </div>
+  <div id="feed-empty" class="feed-empty" hidden>עדיין לא הוגשו עבודות. תהיה/י הראשון/ה.</div>
+  <div id="feed-grid" class="feed-grid"></div>
+</main>
+
+<footer class="site-footer">
+  <p>הוועד - פלטפורמת ביקורת עבודות.</p>
+</footer>
+
+<!-- ===== Modal: Item detail ===== -->
+<div class="modal-overlay" id="modal-item" hidden>
+  <div class="modal-sheet modal-sheet-wide" role="dialog" aria-modal="true">
+    <button class="modal-close" data-close="modal-item" aria-label="סגור">✕</button>
+    <div id="item-detail-content"></div>
+  </div>
+</div>
+
+<!-- ===== Modal: Create item ===== -->
+<div class="modal-overlay" id="modal-create" hidden>
+  <div class="modal-sheet" role="dialog" aria-modal="true">
+    <button class="modal-close" data-close="modal-create" aria-label="סגור">✕</button>
+    <h3 class="modal-title">הגשת עבודה לביקורת</h3>
+    <p class="modal-hint">ספר/י לוועד מה זה, ומה בדיוק רוצים לשמוע עליו.</p>
+
+    <form id="create-form">
+      <label class="field-label" for="f-title">כותרת</label>
+      <input class="field-input" id="f-title" maxlength="120" placeholder='למשל: "פרק ראשון ברומן" או "לוגו למותג חדש"' required>
+
+      <label class="field-label" for="f-desc">מה רוצים לקבל בחוות דעת?</label>
+      <textarea class="field-input field-textarea" id="f-desc" maxlength="2000" placeholder="תארו את העבודה, ההקשר שלה, ובאילו נקודות בדיוק תרצו משוב ממוקד." required></textarea>
+
+      <label class="field-label">קישורים רלוונטיים (אופציונלי)</label>
+      <div id="links-list" class="links-list"></div>
+      <button type="button" class="btn btn-line btn-small" id="btn-add-link">+ הוסף קישור</button>
+
+      <label class="field-label">תמונות (אופציונלי - מתארח ב-imgbb)</label>
+      <div class="upload-zone">
+        <textarea id="imgbb-target" class="imgbb-hidden-target" aria-hidden="true" tabindex="-1"></textarea>
+        <div id="imgbb-trigger-anchor" data-imgbb-trigger data-target="#imgbb-target" class="imgbb-anchor"></div>
+        <div id="image-previews" class="image-previews"></div>
+      </div>
+
+      <p class="form-error" id="create-error" hidden></p>
+      <button type="submit" class="btn btn-primary btn-block" id="btn-submit-create">הגש לוועד</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===== Toast ===== -->
+<div class="toast" id="toast" hidden></div>
+
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<!-- imgbb upload widget - configured for manual targeting + full-size direct links -->
+<script
+  id="imgbb-src"
+  async
+  src="https://imgbb.com/upload.js"
+  data-mode="manual"
+  data-autoinsert="html-embed-full"
+  data-palette="clear"
+  data-lang="he">
+</script>
+
+<script src="app.js"></script>
+</body>
+</html>
