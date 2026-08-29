@@ -47,7 +47,7 @@
 </main>
 
 <footer class="site-footer">
-  <p>הוועד - פלטפורמת ביקורת עבודות.</p>
+  <p>הוועד - פלטפורמת ביקורת עמיתים. מופעל על Google Sheets.</p>
 </footer>
 
 <!-- ===== Modal: Item detail ===== -->
@@ -79,7 +79,7 @@
       <label class="field-label">תמונות (אופציונלי - מתארח ב-imgbb)</label>
       <div class="upload-zone">
         <textarea id="imgbb-target" class="imgbb-hidden-target" aria-hidden="true" tabindex="-1"></textarea>
-        <div id="imgbb-trigger-anchor" data-imgbb-trigger data-target="#imgbb-target" class="imgbb-anchor"></div>
+        <button type="button" id="imgbb-trigger-anchor" data-imgbb-trigger data-target="#imgbb-target" class="upload-trigger-btn">העלאת תמונות</button>
         <div id="image-previews" class="image-previews"></div>
       </div>
 
@@ -101,7 +101,7 @@
   async
   src="https://imgbb.com/upload.js"
   data-mode="manual"
-  data-autoinsert="html-embed-full"
+  data-auto-insert="html-embed-full"
   data-palette="clear"
   data-lang="he">
 </script>
