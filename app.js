@@ -1,5 +1,9 @@
+/* ===========================================================
+   הגדרות
+   =========================================================== */
 const CONFIG = {
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwgtgNFfbynR-v5xjR-5Ug6i0ddxJfCs9S6EA1q5OeHZDWUEmYSbAfqJvRgG6YkLloE/exec',
+  // TODO: הדבק כאן את כתובת ה-Web App שקיבלת מפריסת Code.gs (מסתיימת ב-/exec)
+  APPS_SCRIPT_URL: '',
   GOOGLE_CLIENT_ID: '1087997271039-b8l9oi9mcut6vkp9trdmobgm78fgolme.apps.googleusercontent.com'
 };
 
@@ -158,11 +162,13 @@ function ratingRingHtml(avg, count, size) {
   const offset = circumference * (1 - pct);
   const fontSize = size <= 46 ? 12 : 16;
   return (
-    '<span class="rating-ring-wrap">' +
+    '<span class="rating-ring-wrap" title="דירוג ממוצע מתוך 5 כוכבים">' +
       '<svg class="rating-ring" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' +
-        '<circle class="rating-ring-track" cx="' + c + '" cy="' + c + '" r="' + r + '" stroke-width="4"></circle>' +
-        '<circle class="rating-ring-fill" cx="' + c + '" cy="' + c + '" r="' + r + '" stroke-width="4" ' +
-          'stroke-dasharray="' + circumference + '" stroke-dashoffset="' + offset + '"></circle>' +
+        '<g transform="rotate(-90 ' + c + ' ' + c + ')">' +
+          '<circle class="rating-ring-track" cx="' + c + '" cy="' + c + '" r="' + r + '" stroke-width="4"></circle>' +
+          '<circle class="rating-ring-fill" cx="' + c + '" cy="' + c + '" r="' + r + '" stroke-width="4" ' +
+            'stroke-dasharray="' + circumference + '" stroke-dashoffset="' + offset + '"></circle>' +
+        '</g>' +
         '<text class="rating-ring-num" x="' + c + '" y="' + c + '" font-size="' + fontSize + '">' + avg.toFixed(1) + '</text>' +
       '</svg>' +
       '<span class="rating-ring-label">' + count + ' ביקורות</span>' +
@@ -248,6 +254,7 @@ function renderItemDetail(item) {
     signinNote.hidden = false;
   } else if (item.isOwner) {
     ownerNote.hidden = false;
+    document.getElementById('btn-delete-item').onclick = () => deleteItem(item.itemId);
   } else {
     reviewBox.hidden = false;
     const my = item.myReview || null;
@@ -292,7 +299,7 @@ function renderReviewsList(reviews) {
     const likeBtn =
       '<button type="button" class="like-btn' + (r.myLiked ? ' liked' : '') + '" data-review-id="' + escapeAttr(r.reviewId) + '"' +
       (r.canLike ? '' : ' disabled title="לא ניתן לסמן לייק לביקורת שלך, או שצריך להתחבר"') + '>' +
-        (r.myLiked ? '★ אהבתי' : '☆ אהבתי') + (r.likeCount ? ' · ' + r.likeCount : '') +
+        (r.myLiked ? '♥' : '♡') + (r.likeCount ? ' ' + r.likeCount : '') +
       '</button>';
 
     return (
@@ -371,6 +378,18 @@ async function toggleLike(reviewId) {
   if (!state.key) { showToast('צריך להתחבר עם Google כדי לסמן לייק', true); return; }
   try {
     await api('toggleLike', { key: state.key, reviewId: reviewId });
+    await loadAllData();
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+async function deleteItem(itemId) {
+  if (!confirm('למחוק את העבודה? הפעולה בלתי הפיכה, וכל הביקורות עליה יימחקו גם כן.')) return;
+  try {
+    await api('deleteItem', { key: state.key, itemId: itemId });
+    showToast('העבודה נמחקה');
+    closeModal('modal-item');
     await loadAllData();
   } catch (err) {
     showToast(err.message, true);

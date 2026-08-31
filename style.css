@@ -180,8 +180,8 @@ header, main, footer, .modal-overlay { position: relative; z-index: 1; }
 .item-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); border-color: var(--line-strong); }
 
 .item-card-thumb {
-  width: 100%; height: 130px; object-fit: cover;
-  border-radius: var(--radius-sm); background: var(--bg);
+  width: 100%; max-height: 260px; height: auto; object-fit: contain;
+  border-radius: var(--radius-sm); background: var(--bg); display: block;
 }
 
 .item-card-title { font-family: var(--font-display); font-weight: 600; font-size: 18px; margin: 0; }
@@ -198,13 +198,11 @@ header, main, footer, .modal-overlay { position: relative; z-index: 1; }
 /* ===========================================================
    Rating ring — signature element
    =========================================================== */
-.rating-ring-wrap { display: inline-flex; align-items: center; gap: 8px; }
-.rating-ring { transform: rotate(-90deg); }
+.rating-ring-wrap { display: inline-flex; align-items: center; gap: 8px; cursor: default; }
 .rating-ring-track { fill: none; stroke: var(--line); }
 .rating-ring-fill { fill: none; stroke: url(#ringGradient); stroke-linecap: round; transition: stroke-dashoffset 0.4s ease; }
 .rating-ring-num {
   font-family: var(--font-mono); font-weight: 700; fill: var(--ink);
-  transform: rotate(90deg);
   text-anchor: middle; dominant-baseline: central;
 }
 .rating-ring-label { font-size: 11.5px; color: var(--ink-faint); font-family: var(--font-mono); }
@@ -323,6 +321,7 @@ header, main, footer, .modal-overlay { position: relative; z-index: 1; }
   font-size: 13.5px; color: var(--ink-soft); background: var(--sage-bg);
   border: 1.3px solid var(--sage-line); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 26px;
 }
+.owner-note p { margin: 0 0 10px; }
 
 /* reviews list */
 .reviews-title { font-weight: 700; font-size: 15px; margin: 0 0 14px; }
@@ -343,12 +342,12 @@ header, main, footer, .modal-overlay { position: relative; z-index: 1; }
 .reviews-empty { color: var(--ink-faint); font-size: 13.5px; font-family: var(--font-mono); }
 
 .like-btn {
-  display: inline-flex; align-items: center; gap: 6px;
+  display: inline-flex; align-items: center; gap: 5px;
   border: 1.3px solid var(--line-strong); background: var(--card); color: var(--ink-faint);
-  border-radius: var(--radius-pill); padding: 5px 13px; font-size: 12.5px; font-weight: 600;
+  border-radius: var(--radius-pill); padding: 5px 13px; font-size: 15px; font-weight: 600;
 }
-.like-btn:hover:not(:disabled) { border-color: var(--indigo); color: var(--indigo); }
-.like-btn.liked { border-color: var(--indigo); background: rgba(91,84,232,0.08); color: var(--indigo); }
+.like-btn:hover:not(:disabled) { border-color: #E24C7A; color: #E24C7A; }
+.like-btn.liked { border-color: #E24C7A; background: rgba(226,76,122,0.08); color: #E24C7A; }
 .like-btn:disabled { opacity: 0.45; cursor: default; }
 
 /* ===========================================================
