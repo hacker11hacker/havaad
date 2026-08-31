@@ -3,7 +3,7 @@
    =========================================================== */
 const CONFIG = {
   // TODO: הדבק כאן את כתובת ה-Web App שקיבלת מפריסת Code.gs (מסתיימת ב-/exec)
-  APPS_SCRIPT_URL: '',
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwgtgNFfbynR-v5xjR-5Ug6i0ddxJfCs9S6EA1q5OeHZDWUEmYSbAfqJvRgG6YkLloE/exec',
   GOOGLE_CLIENT_ID: '1087997271039-b8l9oi9mcut6vkp9trdmobgm78fgolme.apps.googleusercontent.com'
 };
 
