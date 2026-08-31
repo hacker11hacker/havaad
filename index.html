@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>הוועד — ביקורת עמיתים על עבודות</title>
+<title>הוועד - ביקורת על עבודות</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&family=Heebo:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -38,9 +38,8 @@
 
 <!-- ===== Hero ===== -->
 <section class="hero">
-  <p class="eyebrow">חוות דעת אמיתיות // מהקהילה</p>
-  <h1 class="hero-title">תעלה עבודה.<br>תקבל חוות דעת אמיתית.</h1>
-  <p class="hero-sub">טקסטים, עיצובים, מערכות — כל דבר שרוצים עליו זווית שנייה. חברי הוועד מדרגים בכוכבים וכותבים למה.</p>
+  <h1 class="hero-title">תעלה עבודה,<br>תקבל חוות דעת אמיתית.</h1>
+  <p class="hero-sub">טקסטים, עיצובים, מערכות - כל דבר שרוצים עליו זווית שנייה. חברי הוועד מדרגים בכוכבים.</p>
   <div class="hero-actions">
     <button class="btn btn-primary" id="btn-open-create">הגש עבודה לביקורת</button>
     <a href="#feed" class="btn btn-ghost">עיין בעבודות שהוגשו</a>
@@ -54,12 +53,12 @@
     <span class="feed-count" id="feed-count"></span>
   </div>
   <div id="feed-loading" class="feed-loading">טוען עבודות וביקורות...</div>
-  <div id="feed-empty" class="feed-empty" hidden>עדיין לא הוגשו עבודות. תהיה/י הראשון/ה.</div>
+  <div id="feed-empty" class="feed-empty" hidden>עדיין לא הוגשו עבודות. תהיה/י הראשון/ה!</div>
   <div id="feed-grid" class="feed-grid"></div>
 </main>
 
 <footer class="site-footer">
-  <p>הוועד — פלטפורמת ביקורת עמיתים. מופעל על Google Sheets.</p>
+  <p>הוועד - פלטפורמת ביקורות</p>
 </footer>
 
 <!-- ===== Modal: Item detail ===== -->
@@ -82,15 +81,15 @@
       <div class="upload-zone">
         <textarea id="imgbb-target-review" class="imgbb-hidden-target" aria-hidden="true" tabindex="-1"></textarea>
         <button type="button" id="imgbb-trigger-review" data-imgbb-trigger data-target="#imgbb-target-review" class="upload-trigger-btn">+ הוספת תמונה לביקורת</button>
-        <p class="upload-hint">ייפתח חלון קטן להעלאה מול imgbb — אחרי הבחירה סוגרים אותו וחוזרים לכאן, התמונה תופיע למטה אוטומטית.</p>
+        <p class="upload-hint">ייפתח חלון קטן להעלאה - אחרי העלאה הוא נסגר אוטומטית וחוזרים לכאן, התמונה תופיע למטה.</p>
         <div id="review-image-previews" class="image-previews"></div>
       </div>
 
       <p class="form-error" id="review-error" hidden></p>
       <button class="btn btn-primary btn-block" id="btn-submit-review">שלח ביקורת</button>
     </div>
-    <p class="signin-note" id="signin-note" hidden>צריך להתחבר עם Google כדי לכתוב ביקורת.</p>
-    <p class="owner-note" id="owner-note" hidden>זו העבודה שלך — אי אפשר לבקר על עבודה שהעלית בעצמך.</p>
+    <p class="signin-note" id="signin-note" hidden>צריך להתחבר עם גוגל כדי לכתוב ביקורת.</p>
+    <p class="owner-note" id="owner-note" hidden>אי אפשר לבקר על עבודה שהעלית בעצמך.</p>
 
     <hr class="divider" id="reviews-divider" hidden>
     <p class="reviews-title" id="reviews-title" hidden></p>
@@ -103,11 +102,11 @@
   <div class="modal-sheet" role="dialog" aria-modal="true">
     <button class="modal-close" data-close="modal-create" aria-label="סגור">✕</button>
     <h3 class="modal-title">הגשת עבודה לביקורת</h3>
-    <p class="modal-hint">ספר/י לוועד מה זה, ומה בדיוק רוצים לשמוע עליו.</p>
+    <p class="modal-hint">ספר/י מה זה, ומה בדיוק רוצים לשמוע עליו.</p>
 
     <form id="create-form">
       <label class="field-label" for="f-title">כותרת</label>
-      <input class="field-input" id="f-title" maxlength="120" placeholder='למשל: "פרק ראשון ברומן" או "לוגו למותג חדש"' required>
+      <input class="field-input" id="f-title" maxlength="120" placeholder='למשל: "לוגו למותג חדש"' required>
 
       <label class="field-label" for="f-desc">מה רוצים לקבל בחוות דעת?</label>
       <textarea class="field-input field-textarea" id="f-desc" maxlength="2000" placeholder="תארו את העבודה, ההקשר שלה, ובאילו נקודות בדיוק תרצו משוב ממוקד." required></textarea>
@@ -116,11 +115,11 @@
       <div id="links-list" class="links-list"></div>
       <button type="button" class="btn btn-line btn-small" id="btn-add-link">+ הוסף קישור</button>
 
-      <label class="field-label">תמונות (אופציונלי — מתארח ב-imgbb)</label>
+      <label class="field-label">תמונות (אופציונלי)</label>
       <div class="upload-zone">
         <textarea id="imgbb-target" class="imgbb-hidden-target" aria-hidden="true" tabindex="-1"></textarea>
         <button type="button" id="imgbb-trigger-anchor" data-imgbb-trigger data-target="#imgbb-target" class="upload-trigger-btn">+ העלאת תמונות</button>
-        <p class="upload-hint">ייפתח חלון קטן להעלאה מול imgbb — אחרי הבחירה סוגרים אותו וחוזרים לכאן, התמונה תופיע למטה אוטומטית.</p>
+        <p class="upload-hint">ייפתח חלון קטן להעלאה - אחרי העלאה הוא נסגר אוטומטית וחוזרים לכאן, התמונה תופיע למטה.</p>
         <div id="image-previews" class="image-previews"></div>
       </div>
 
@@ -144,7 +143,7 @@
 <!-- Google Identity Services -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-<!-- imgbb upload widget — mode manual: אנחנו מספקים בעצמנו את כפתורי ההעלאה (למעלה),
+<!-- imgbb upload widget - mode manual: אנחנו מספקים בעצמנו את כפתורי ההעלאה (למעלה),
      כדי שנוכל לקבוע בדיוק היכן הם יופיעו ואיך ייראו. -->
 <script
   id="imgbb-src"

@@ -1,8 +1,4 @@
-/* ===========================================================
-   הגדרות
-   =========================================================== */
 const CONFIG = {
-  // TODO: הדבק כאן את כתובת ה-Web App שקיבלת מפריסת Code.gs (מסתיימת ב-/exec)
   APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwgtgNFfbynR-v5xjR-5Ug6i0ddxJfCs9S6EA1q5OeHZDWUEmYSbAfqJvRgG6YkLloE/exec',
   GOOGLE_CLIENT_ID: '1087997271039-b8l9oi9mcut6vkp9trdmobgm78fgolme.apps.googleusercontent.com'
 };
@@ -25,8 +21,6 @@ let pendingImages = [];       // תמונות עבור יצירת פריט חד�
 let pendingReviewImages = []; // תמונות עבור ביקורת
 
 let reconcileTimer = null;
-// כל פעולה מקומית (יצירה/ביקורת/לייק/מחיקה) מוצגת מיד באתר, ורק אחרי 10 שניות
-// נשלפים הנתונים מחדש מגוגל סקריפט כדי לוודא שהפעולה באמת נקלטה שם.
 function scheduleReconcile() {
   clearTimeout(reconcileTimer);
   reconcileTimer = setTimeout(() => { loadAllData(); }, 10000);
@@ -37,7 +31,7 @@ function scheduleReconcile() {
    =========================================================== */
 async function api(action, payload) {
   if (!CONFIG.APPS_SCRIPT_URL) {
-    showToast('חסרה כתובת שרת: יש להדביק את ה-URL של הפריסה בתוך app.js (משתנה APPS_SCRIPT_URL)', true);
+    showToast('השרת לא נמצא, אנא פנה למנהל המערכת', true);
     throw new Error('APPS_SCRIPT_URL not set');
   }
   const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
@@ -91,7 +85,7 @@ async function handleCredentialResponse(response) {
     showToast('התחברת בהצלחה, ברוך/ה הבא/ה ' + (state.name || ''));
     await loadAllData();
   } catch (err) {
-    showToast('ההתחברות נכשלה: ' + err.message, true);
+    showToast('ההתחברות נכשלה', true);
   }
 }
 
@@ -152,7 +146,7 @@ async function loadAllData() {
       renderItemDetail(allItems[currentOpenItemId]);
     }
   } catch (err) {
-    loadingEl.textContent = 'שגיאה בטעינת הנתונים: ' + err.message;
+    loadingEl.textContent = 'שגיאה בטעינת הנתונים';
   }
 }
 
@@ -253,14 +247,12 @@ function renderItemDetail(item) {
     linksHtml +
     '<div class="detail-rating-summary">' + ratingRingHtml(item.avgRating, item.reviewCount, 56) + '</div>';
 
-  // כפתור מחיקת עבודה - נפרד לגמרי מהודעת "לא ניתן לבקר על העבודה שלך"
   const ownerActions = document.getElementById('owner-actions');
   ownerActions.hidden = !item.isOwner;
   if (item.isOwner) {
     document.getElementById('btn-delete-item').onclick = () => deleteItem(item.itemId);
   }
 
-  // אזור כתיבת/עדכון ביקורת - אלמנטים סטטיים, רק מציגים/מסתירים ומעדכנים תוכן
   const reviewBox = document.getElementById('review-form-box');
   const signinNote = document.getElementById('signin-note');
   const ownerNote = document.getElementById('owner-note');
@@ -472,7 +464,7 @@ async function reactToReview(reviewId, type) {
 }
 
 async function deleteReview(reviewId) {
-  if (!confirm('למחוק את הביקורת שלך?')) return;
+  if (!confirm('למחוק את הביקורת?')) return;
   const item = currentOpenItemId && allItems[currentOpenItemId];
   if (!item) return;
 
@@ -615,7 +607,7 @@ function resetCreateForm() {
 async function submitCreateForm(e) {
   e.preventDefault();
   if (!state.key) {
-    showToast('יש להתחבר עם Google לפני הגשת עבודה', true);
+    showToast('יש להתחבר עם גוגל לפני הגשת עבודה', true);
     return;
   }
   const errEl = document.getElementById('create-error');
@@ -692,7 +684,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.getElementById('btn-open-create').addEventListener('click', () => {
-  if (!state.key) { showToast('צריך להתחבר עם Google קודם', true); return; }
+  if (!state.key) { showToast('צריך להתחבר עם גוגל קודם', true); return; }
   resetCreateForm();
   openModal('modal-create');
 });

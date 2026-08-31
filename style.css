@@ -11,8 +11,8 @@
   --line-strong: #D6D6EC;
 
   --indigo: #5B54E8;
-  --indigo-dark: #4A44C4;
-  --violet: #8B5CF6;
+  --indigo-dark: #4453c4;
+  --violet: #5c9af6;
   --sky: #38BDF8;
   --grad: linear-gradient(135deg, var(--indigo), var(--violet));
 
