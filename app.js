@@ -1,6 +1,3 @@
-/* ===========================================================
-   הגדרות
-   =========================================================== */
 const CONFIG = {
   APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwgtgNFfbynR-v5xjR-5Ug6i0ddxJfCs9S6EA1q5OeHZDWUEmYSbAfqJvRgG6YkLloE/exec',
   GOOGLE_CLIENT_ID: '1087997271039-b8l9oi9mcut6vkp9trdmobgm78fgolme.apps.googleusercontent.com'
@@ -15,8 +12,13 @@ const state = {
   picture: localStorage.getItem('crit_picture') || '',
 };
 
-let pendingImages = []; // תמונות שהועלו ל-imgbb עבור הפריט שנוצר כרגע
+let allItems = {};          // itemId -> item (כולל ביקורות, נטען פעם אחת ומעודכן לאחר כל פעולה)
+let itemOrder = [];         // סדר הצגה בפיד
+let currentOpenItemId = null;
 let currentStars = 0;
+
+let pendingImages = [];       // תמונות עבור יצירת פריט חדש
+let pendingReviewImages = []; // תמונות עבור ביקורת
 
 /* ===========================================================
    עזר: קריאות לשרת
@@ -75,7 +77,7 @@ async function handleCredentialResponse(response) {
     localStorage.setItem('crit_picture', state.picture);
     renderAuthArea();
     showToast('התחברת בהצלחה, ברוך/ה הבא/ה ' + (state.name || ''));
-    loadFeed();
+    await loadAllData();
   } catch (err) {
     showToast('ההתחברות נכשלה: ' + err.message, true);
   }
@@ -91,6 +93,7 @@ function signOut() {
   }
   renderAuthArea();
   showToast('התנתקת');
+  loadAllData();
 }
 
 function renderAuthArea() {
@@ -100,7 +103,7 @@ function renderAuthArea() {
     const chip = document.createElement('div');
     chip.className = 'user-chip';
     chip.innerHTML =
-      (state.picture ? '<img src="' + escapeAttr(state.picture) + '" alt="">' : '') +
+      (state.picture ? '<img src="' + escapeAttr(state.picture) + '" alt="" referrerpolicy="no-referrer">' : '') +
       '<span>' + escapeHtml(state.name || 'משתמש') + '</span>' +
       '<button class="signout" id="btn-signout">התנתק</button>';
     area.appendChild(chip);
@@ -117,21 +120,65 @@ function renderAuthArea() {
 }
 
 /* ===========================================================
-   פיד
+   טעינה מלאה - פריטים + ביקורות + לייקים, הכל בבת אחת
    =========================================================== */
-async function loadFeed() {
+async function loadAllData() {
+  const loadingEl = document.getElementById('feed-loading');
   try {
-    const data = await api('listItems', {});
-    renderFeed(data.items || []);
+    const data = await api('getAllData', { key: state.key || '' });
+    allItems = {};
+    itemOrder = [];
+    (data.items || []).forEach(item => {
+      allItems[item.itemId] = item;
+      itemOrder.push(item.itemId);
+    });
+    loadingEl.hidden = true;
+    renderFeed();
+    // אם מודל פריט פתוח כרגע - מרעננים אותו עם הנתונים המעודכנים
+    if (currentOpenItemId && allItems[currentOpenItemId]) {
+      renderItemDetail(allItems[currentOpenItemId]);
+    }
   } catch (err) {
-    showToast('שגיאה בטעינת הפיד: ' + err.message, true);
+    loadingEl.textContent = 'שגיאה בטעינת הנתונים: ' + err.message;
   }
 }
 
-function renderFeed(items) {
+/* ===========================================================
+   טבעת דירוג (Rating Ring) - האלמנט החזותי המרכזי
+   =========================================================== */
+function ratingRingHtml(avg, count, size) {
+  size = size || 46;
+  if (!count) {
+    return '<span class="rating-ring-empty">אין עדיין ביקורות</span>';
+  }
+  const r = (size - 6) / 2;
+  const c = size / 2;
+  const circumference = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(1, avg / 5));
+  const offset = circumference * (1 - pct);
+  const fontSize = size <= 46 ? 12 : 16;
+  return (
+    '<span class="rating-ring-wrap">' +
+      '<svg class="rating-ring" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' +
+        '<circle class="rating-ring-track" cx="' + c + '" cy="' + c + '" r="' + r + '" stroke-width="4"></circle>' +
+        '<circle class="rating-ring-fill" cx="' + c + '" cy="' + c + '" r="' + r + '" stroke-width="4" ' +
+          'stroke-dasharray="' + circumference + '" stroke-dashoffset="' + offset + '"></circle>' +
+        '<text class="rating-ring-num" x="' + c + '" y="' + c + '" font-size="' + fontSize + '">' + avg.toFixed(1) + '</text>' +
+      '</svg>' +
+      '<span class="rating-ring-label">' + count + ' ביקורות</span>' +
+    '</span>'
+  );
+}
+
+/* ===========================================================
+   פיד
+   =========================================================== */
+function renderFeed() {
   const grid = document.getElementById('feed-grid');
   const empty = document.getElementById('feed-empty');
   const count = document.getElementById('feed-count');
+  const items = itemOrder.map(id => allItems[id]);
+
   count.textContent = items.length ? (items.length + ' עבודות') : '';
   grid.innerHTML = '';
   empty.hidden = items.length > 0;
@@ -143,12 +190,8 @@ function renderFeed(items) {
     card.setAttribute('role', 'button');
 
     const thumb = (item.images && item.images[0])
-      ? '<img class="item-card-thumb" src="' + escapeAttr(item.images[0]) + '" alt="">'
+      ? '<img class="item-card-thumb" src="' + escapeAttr(item.images[0]) + '" alt="" referrerpolicy="no-referrer" loading="lazy">'
       : '';
-
-    const stampHtml = item.reviewCount > 0
-      ? '<span class="stamp">★ ' + item.avgRating.toFixed(1) + ' · ' + item.reviewCount + '</span>'
-      : '<span class="stamp stamp-empty">אין עדיין ביקורות</span>';
 
     card.innerHTML =
       thumb +
@@ -156,7 +199,7 @@ function renderFeed(items) {
       '<p class="item-card-desc">' + escapeHtml(item.description || '') + '</p>' +
       '<div class="item-card-footer">' +
         '<span class="item-card-owner">מאת ' + escapeHtml(item.ownerName || 'אלמוני') + '</span>' +
-        stampHtml +
+        ratingRingHtml(item.avgRating, item.reviewCount, 42) +
       '</div>';
 
     card.addEventListener('click', () => openItemDetail(item.itemId));
@@ -166,50 +209,26 @@ function renderFeed(items) {
 }
 
 /* ===========================================================
-   פרטי פריט + ביקורות
+   פרטי פריט + ביקורות (נטען כולו מהזיכרון - ללא בקשת רשת)
    =========================================================== */
-async function openItemDetail(itemId) {
-  try {
-    const item = await api('getItem', { itemId: itemId, key: state.key || '' });
-    renderItemDetail(item);
-    openModal('modal-item');
-  } catch (err) {
-    showToast('שגיאה בטעינת הפריט: ' + err.message, true);
-  }
+function openItemDetail(itemId) {
+  const item = allItems[itemId];
+  if (!item) { showToast('הפריט לא נמצא', true); return; }
+  currentOpenItemId = itemId;
+  renderItemDetail(item);
+  openModal('modal-item');
 }
 
 function renderItemDetail(item) {
   const el = document.getElementById('item-detail-content');
 
   const imagesHtml = (item.images && item.images.length)
-    ? '<div class="detail-images">' + item.images.map(u => '<img src="' + escapeAttr(u) + '" alt="">').join('') + '</div>'
+    ? '<div class="detail-images">' + item.images.map(u => '<img src="' + escapeAttr(u) + '" alt="" referrerpolicy="no-referrer">').join('') + '</div>'
     : '';
 
   const linksHtml = (item.links && item.links.length)
     ? '<ul class="detail-links">' + item.links.map(l => '<li><a href="' + escapeAttr(l) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(l) + '</a></li>').join('') + '</ul>'
     : '';
-
-  const ratingHtml = item.reviewCount > 0
-    ? '<span class="stamp">★ ' + item.avgRating.toFixed(1) + '</span><span style="color:var(--ink-faint);font-size:13px">' + item.reviewCount + ' ביקורות</span>'
-    : '<span class="stamp stamp-empty">אין עדיין ביקורות - היו הראשונים</span>';
-
-  let actionHtml = '';
-  if (!state.key) {
-    actionHtml = '<p class="signin-note">צריך להתחבר עם גוגל כדי לכתוב ביקורת.</p>';
-  } else if (item.isOwner) {
-    actionHtml = '<p class="owner-note">זו העבודה שלך - אי אפשר לבקר על עבודה שהעלית בעצמך, אבל אפשר לראות מה אחרים כתבו למטה.</p>';
-  } else {
-    const my = item.myReview || null;
-    currentStars = my ? my.stars : 0;
-    actionHtml =
-      '<div class="review-form-box">' +
-        '<p class="review-form-title">' + (my ? 'עדכון הביקורת שלך' : 'כתיבת ביקורת') + '</p>' +
-        '<div class="star-picker" id="star-picker"></div>' +
-        '<textarea class="field-input field-textarea" id="review-comment" placeholder="מה עבד, מה פחות, ומה כדאי לשנות? (אופציונלי)">' + escapeHtml(my ? my.comment : '') + '</textarea>' +
-        '<p class="form-error" id="review-error" hidden></p>' +
-        '<button class="btn btn-primary btn-block" id="btn-submit-review" style="margin-top:12px">' + (my ? 'עדכן ביקורת' : 'שלח ביקורת') + '</button>' +
-      '</div>';
-  }
 
   el.innerHTML =
     '<p class="detail-owner">הוגש על ידי ' + escapeHtml(item.ownerName || 'אלמוני') + '</p>' +
@@ -217,16 +236,46 @@ function renderItemDetail(item) {
     imagesHtml +
     '<p class="detail-desc">' + escapeHtml(item.description || '') + '</p>' +
     linksHtml +
-    '<div class="detail-rating-summary">' + ratingHtml + '</div>' +
-    actionHtml +
-    '<hr class="divider">' +
-    '<p class="reviews-title">ביקורות (' + (item.reviews ? item.reviews.length : 0) + ')</p>' +
-    renderReviewsList(item.reviews || []);
+    '<div class="detail-rating-summary">' + ratingRingHtml(item.avgRating, item.reviewCount, 56) + '</div>';
 
-  if (state.key && !item.isOwner) {
+  // אזור כתיבת/עדכון ביקורת - אלמנטים סטטיים, רק מציגים/מסתירים ומעדכנים תוכן
+  const reviewBox = document.getElementById('review-form-box');
+  const signinNote = document.getElementById('signin-note');
+  const ownerNote = document.getElementById('owner-note');
+  reviewBox.hidden = true; signinNote.hidden = true; ownerNote.hidden = true;
+
+  if (!state.key) {
+    signinNote.hidden = false;
+  } else if (item.isOwner) {
+    ownerNote.hidden = false;
+  } else {
+    reviewBox.hidden = false;
+    const my = item.myReview || null;
+    currentStars = my ? my.stars : 0;
+    pendingReviewImages.length = 0;
+    if (my && my.images) pendingReviewImages.push.apply(pendingReviewImages, my.images);
+    document.getElementById('review-form-title').textContent = my ? 'עדכון הביקורת שלך' : 'כתיבת ביקורת';
+    document.getElementById('review-comment').value = my ? (my.comment || '') : '';
+    document.getElementById('btn-submit-review').textContent = my ? 'עדכן ביקורת' : 'שלח ביקורת';
+    document.getElementById('review-error').hidden = true;
     renderStarPicker(currentStars);
-    document.getElementById('btn-submit-review').addEventListener('click', () => submitReview(item.itemId));
+    renderImagePreviews('review-image-previews', pendingReviewImages);
+    const btn = document.getElementById('btn-submit-review');
+    btn.disabled = false;
+    btn.onclick = () => submitReview(item.itemId);
   }
+
+  // רשימת ביקורות
+  const reviews = item.reviews || [];
+  document.getElementById('reviews-divider').hidden = false;
+  const titleEl = document.getElementById('reviews-title');
+  titleEl.hidden = false;
+  titleEl.textContent = 'ביקורות (' + reviews.length + ')';
+  document.getElementById('reviews-list').innerHTML = renderReviewsList(reviews);
+
+  document.querySelectorAll('.like-btn').forEach(btn => {
+    btn.addEventListener('click', () => toggleLike(btn.dataset.reviewId));
+  });
 }
 
 function renderReviewsList(reviews) {
@@ -234,34 +283,63 @@ function renderReviewsList(reviews) {
   return reviews.map(r => {
     const stars = '★'.repeat(r.stars) + '☆'.repeat(5 - r.stars);
     const time = r.createdAt ? new Date(r.createdAt).toLocaleDateString('he-IL') : '';
+    const avatar = r.reviewerPicture
+      ? '<img class="review-avatar" src="' + escapeAttr(r.reviewerPicture) + '" alt="" referrerpolicy="no-referrer">'
+      : '<span class="review-avatar-fallback">' + escapeHtml((r.reviewerName || '?').charAt(0)) + '</span>';
+    const imagesHtml = (r.images && r.images.length)
+      ? '<div class="review-images">' + r.images.map(u => '<img src="' + escapeAttr(u) + '" alt="" referrerpolicy="no-referrer">').join('') + '</div>'
+      : '';
+    const likeBtn =
+      '<button type="button" class="like-btn' + (r.myLiked ? ' liked' : '') + '" data-review-id="' + escapeAttr(r.reviewId) + '"' +
+      (r.canLike ? '' : ' disabled title="לא ניתן לסמן לייק לביקורת שלך, או שצריך להתחבר"') + '>' +
+        (r.myLiked ? '★ אהבתי' : '☆ אהבתי') + (r.likeCount ? ' · ' + r.likeCount : '') +
+      '</button>';
+
     return (
       '<div class="review-item">' +
         '<div class="review-item-head">' +
-          '<span class="review-author">' + escapeHtml(r.reviewerName || 'אלמוני') + '</span>' +
-          '<span class="review-time">' + time + '</span>' +
+          avatar +
+          '<div class="review-head-text">' +
+            '<span class="review-author">' + escapeHtml(r.reviewerName || 'אלמוני') + '</span>' +
+            '<span class="review-time">' + time + '</span>' +
+          '</div>' +
         '</div>' +
         '<div class="review-stars">' + stars + '</div>' +
         (r.comment ? '<p class="review-comment">' + escapeHtml(r.comment) + '</p>' : '') +
+        imagesHtml +
+        likeBtn +
       '</div>'
     );
   }).join('');
 }
 
+/* ===========================================================
+   בוחר כוכבים - מבוסס JS (לא CSS ~) כדי שההדגשה תמיד תואם לבחירה, גם ב-RTL
+   =========================================================== */
 function renderStarPicker(selected) {
   const box = document.getElementById('star-picker');
   box.innerHTML = '';
+  const buttons = [];
   for (let i = 1; i <= 5; i++) {
     const b = document.createElement('button');
     b.type = 'button';
-    b.textContent = i <= selected ? '★' : '☆';
-    b.dataset.value = i;
-    if (i <= selected) b.classList.add('active');
-    b.addEventListener('click', () => {
-      currentStars = i;
-      renderStarPicker(currentStars);
-    });
+    b.dataset.value = String(i);
+    buttons.push(b);
     box.appendChild(b);
   }
+  function paint(upto) {
+    buttons.forEach((b, idx) => {
+      const val = idx + 1;
+      b.textContent = val <= upto ? '★' : '☆';
+      b.classList.toggle('active', val <= upto);
+    });
+  }
+  buttons.forEach(b => {
+    b.addEventListener('mouseenter', () => paint(Number(b.dataset.value)));
+    b.addEventListener('click', () => { currentStars = Number(b.dataset.value); paint(currentStars); });
+  });
+  box.addEventListener('mouseleave', () => paint(currentStars));
+  paint(selected);
 }
 
 async function submitReview(itemId) {
@@ -276,14 +354,26 @@ async function submitReview(itemId) {
   const btn = document.getElementById('btn-submit-review');
   btn.disabled = true;
   try {
-    await api('addReview', { key: state.key, itemId: itemId, stars: currentStars, comment: comment });
+    await api('addReview', {
+      key: state.key, itemId: itemId, stars: currentStars, comment: comment, images: pendingReviewImages
+    });
     showToast('הביקורת נשלחה, תודה!');
-    openItemDetail(itemId);
-    loadFeed();
+    await loadAllData();
   } catch (err) {
     errEl.textContent = err.message;
     errEl.hidden = false;
+  } finally {
     btn.disabled = false;
+  }
+}
+
+async function toggleLike(reviewId) {
+  if (!state.key) { showToast('צריך להתחבר עם Google כדי לסמן לייק', true); return; }
+  try {
+    await api('toggleLike', { key: state.key, reviewId: reviewId });
+    await loadAllData();
+  } catch (err) {
+    showToast(err.message, true);
   }
 }
 
@@ -308,34 +398,43 @@ function collectLinks() {
     .filter(Boolean);
 }
 
-function renderImagePreviews() {
-  const box = document.getElementById('image-previews');
-  box.innerHTML = pendingImages.map((url, idx) =>
+/* ===========================================================
+   תצוגה מקדימה כללית לתמונות (משמש גם ליצירת פריט וגם לביקורת)
+   =========================================================== */
+function renderImagePreviews(containerId, imagesArray) {
+  const box = document.getElementById(containerId);
+  box.innerHTML = imagesArray.map((url, idx) =>
     '<div class="image-preview">' +
-      '<img src="' + escapeAttr(url) + '" alt="">' +
+      '<img src="' + escapeAttr(url) + '" alt="" referrerpolicy="no-referrer">' +
       '<button type="button" data-idx="' + idx + '" aria-label="הסר תמונה">✕</button>' +
     '</div>'
   ).join('');
   box.querySelectorAll('button').forEach(btn => {
     btn.addEventListener('click', () => {
-      pendingImages.splice(Number(btn.dataset.idx), 1);
-      renderImagePreviews();
+      imagesArray.splice(Number(btn.dataset.idx), 1);
+      renderImagePreviews(containerId, imagesArray);
     });
   });
 }
 
-// ה-widget של imgbb כותב HTML (data-autoinsert="html-embed-full") לתוך הטקסטאריה הזו
-// לכל תמונה שהועלתה. שולפים משם את כתובות ה-URL ומרוקנים את הטקסטאריה כדי שהעלאה הבאה תתחיל נקי.
-function watchImgbbTarget() {
-  const ta = document.getElementById('imgbb-target');
+// ה-widget של imgbb כותב HTML (data-auto-insert="html-embed-full") לתוך הטקסטאריה המוסתרת
+// המתאימה, לכל תמונה שהועלתה. שולפים משם את כתובות ה-URL ומרוקנים את הטקסטאריה
+// כדי שהעלאה הבאה תתחיל נקי.
+function setupImageWatcher(textareaId, imagesArray, previewsContainerId) {
+  const ta = document.getElementById(textareaId);
   if (!ta) return;
   ta.addEventListener('input', () => {
     const matches = ta.value.matchAll(/<img[^>]*\ssrc=["']([^"']+)["']/gi);
+    let added = false;
     for (const m of matches) {
-      if (m[1] && !pendingImages.includes(m[1])) pendingImages.push(m[1]);
+      if (m[1] && !imagesArray.includes(m[1])) { imagesArray.push(m[1]); added = true; }
     }
     ta.value = '';
-    renderImagePreviews();
+    renderImagePreviews(previewsContainerId, imagesArray);
+    if (added) {
+      showToast('התמונה נוספה בהצלחה');
+      window.focus();
+    }
   });
 }
 
@@ -343,8 +442,8 @@ function resetCreateForm() {
   document.getElementById('create-form').reset();
   document.getElementById('links-list').innerHTML = '';
   addLinkRow('');
-  pendingImages = [];
-  renderImagePreviews();
+  pendingImages.length = 0;
+  renderImagePreviews('image-previews', pendingImages);
   document.getElementById('create-error').hidden = true;
 }
 
@@ -367,16 +466,13 @@ async function submitCreateForm(e) {
   btn.disabled = true;
   try {
     await api('createItem', {
-      key: state.key,
-      title: title,
-      description: description,
-      links: collectLinks(),
-      images: pendingImages
+      key: state.key, title: title, description: description,
+      links: collectLinks(), images: pendingImages
     });
     showToast('העבודה הוגשה לוועד!');
     closeModal('modal-create');
     resetCreateForm();
-    loadFeed();
+    await loadAllData();
   } catch (err) {
     errEl.textContent = err.message;
     errEl.hidden = false;
@@ -395,6 +491,7 @@ function openModal(id) {
 function closeModal(id) {
   document.getElementById(id).hidden = true;
   document.body.style.overflow = '';
+  if (id === 'modal-item') currentOpenItemId = null;
 }
 
 document.querySelectorAll('[data-close]').forEach(btn => {
@@ -412,7 +509,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.getElementById('btn-open-create').addEventListener('click', () => {
-  if (!state.key) { showToast('צריך להתחבר עם גוגל קודם', true); return; }
+  if (!state.key) { showToast('צריך להתחבר עם Google קודם', true); return; }
   resetCreateForm();
   openModal('modal-create');
 });
@@ -433,6 +530,7 @@ function escapeAttr(str) { return escapeHtml(str); }
    אתחול
    =========================================================== */
 addLinkRow('');
-watchImgbbTarget();
+setupImageWatcher('imgbb-target', pendingImages, 'image-previews');
+setupImageWatcher('imgbb-target-review', pendingReviewImages, 'review-image-previews');
 initGoogleAuth();
-loadFeed();
+loadAllData();

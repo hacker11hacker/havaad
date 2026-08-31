@@ -3,13 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>הוועד - ביקורת עמיתים על עבודות</title>
+<title>הוועד — ביקורת עמיתים על עבודות</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=Heebo:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&family=Heebo:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5B54E8"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="bg-blob bg-blob-1"></div>
+<div class="bg-blob bg-blob-2"></div>
 
 <!-- ===== Masthead ===== -->
 <header class="masthead">
@@ -22,14 +34,13 @@
       <div id="g_id_signin_container"></div>
     </div>
   </div>
-  <div class="masthead-rule"></div>
 </header>
 
 <!-- ===== Hero ===== -->
 <section class="hero">
-  <p class="eyebrow">כתב עת דיגיטלי לחוות דעת // גיליון פתוח</p>
+  <p class="eyebrow">חוות דעת אמיתיות // מהקהילה</p>
   <h1 class="hero-title">תעלה עבודה.<br>תקבל חוות דעת אמיתית.</h1>
-  <p class="hero-sub">טקסטים, עיצובים, מערכות - כל דבר שרוצים עליו זווית שנייה. חברי הוועד מדרגים בכוכבים וכותבים למה.</p>
+  <p class="hero-sub">טקסטים, עיצובים, מערכות — כל דבר שרוצים עליו זווית שנייה. חברי הוועד מדרגים בכוכבים וכותבים למה.</p>
   <div class="hero-actions">
     <button class="btn btn-primary" id="btn-open-create">הגש עבודה לביקורת</button>
     <a href="#feed" class="btn btn-ghost">עיין בעבודות שהוגשו</a>
@@ -42,19 +53,44 @@
     <h2 class="section-title">על שולחן הוועד</h2>
     <span class="feed-count" id="feed-count"></span>
   </div>
+  <div id="feed-loading" class="feed-loading">טוען עבודות וביקורות...</div>
   <div id="feed-empty" class="feed-empty" hidden>עדיין לא הוגשו עבודות. תהיה/י הראשון/ה.</div>
   <div id="feed-grid" class="feed-grid"></div>
 </main>
 
 <footer class="site-footer">
-  <p>הוועד - פלטפורמת ביקורת עמיתים. מופעל על Google Sheets.</p>
+  <p>הוועד — פלטפורמת ביקורת עמיתים. מופעל על Google Sheets.</p>
 </footer>
 
 <!-- ===== Modal: Item detail ===== -->
 <div class="modal-overlay" id="modal-item" hidden>
   <div class="modal-sheet modal-sheet-wide" role="dialog" aria-modal="true">
     <button class="modal-close" data-close="modal-item" aria-label="סגור">✕</button>
+
     <div id="item-detail-content"></div>
+
+    <!-- אלמנטים סטטיים (לא נוצרים מחדש) כדי שהווידג'ט של imgbb יוכל להיקשר אליהם פעם אחת בטעינת העמוד -->
+    <div class="review-form-box" id="review-form-box" hidden>
+      <p class="review-form-title" id="review-form-title">כתיבת ביקורת</p>
+      <div class="star-picker" id="star-picker"></div>
+      <textarea class="field-input field-textarea" id="review-comment" placeholder="מה עבד, מה פחות, ומה כדאי לשנות? (אופציונלי)"></textarea>
+
+      <div class="upload-zone">
+        <textarea id="imgbb-target-review" class="imgbb-hidden-target" aria-hidden="true" tabindex="-1"></textarea>
+        <button type="button" id="imgbb-trigger-review" data-imgbb-trigger data-target="#imgbb-target-review" class="upload-trigger-btn">+ הוספת תמונה לביקורת</button>
+        <p class="upload-hint">ייפתח חלון קטן להעלאה מול imgbb — אחרי הבחירה סוגרים אותו וחוזרים לכאן, התמונה תופיע למטה אוטומטית.</p>
+        <div id="review-image-previews" class="image-previews"></div>
+      </div>
+
+      <p class="form-error" id="review-error" hidden></p>
+      <button class="btn btn-primary btn-block" id="btn-submit-review">שלח ביקורת</button>
+    </div>
+    <p class="signin-note" id="signin-note" hidden>צריך להתחבר עם Google כדי לכתוב ביקורת.</p>
+    <p class="owner-note" id="owner-note" hidden>זו העבודה שלך — אי אפשר לבקר על עבודה שהעלית בעצמך.</p>
+
+    <hr class="divider" id="reviews-divider" hidden>
+    <p class="reviews-title" id="reviews-title" hidden></p>
+    <div id="reviews-list"></div>
   </div>
 </div>
 
@@ -76,10 +112,11 @@
       <div id="links-list" class="links-list"></div>
       <button type="button" class="btn btn-line btn-small" id="btn-add-link">+ הוסף קישור</button>
 
-      <label class="field-label">תמונות (אופציונלי - מתארח ב-imgbb)</label>
+      <label class="field-label">תמונות (אופציונלי — מתארח ב-imgbb)</label>
       <div class="upload-zone">
         <textarea id="imgbb-target" class="imgbb-hidden-target" aria-hidden="true" tabindex="-1"></textarea>
-        <button type="button" id="imgbb-trigger-anchor" data-imgbb-trigger data-target="#imgbb-target" class="upload-trigger-btn">העלאת תמונות</button>
+        <button type="button" id="imgbb-trigger-anchor" data-imgbb-trigger data-target="#imgbb-target" class="upload-trigger-btn">+ העלאת תמונות</button>
+        <p class="upload-hint">ייפתח חלון קטן להעלאה מול imgbb — אחרי הבחירה סוגרים אותו וחוזרים לכאן, התמונה תופיע למטה אוטומטית.</p>
         <div id="image-previews" class="image-previews"></div>
       </div>
 
@@ -95,7 +132,8 @@
 <!-- Google Identity Services -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-<!-- imgbb upload widget - configured for manual targeting + full-size direct links -->
+<!-- imgbb upload widget — mode manual: אנחנו מספקים בעצמנו את כפתורי ההעלאה (למעלה),
+     כדי שנוכל לקבוע בדיוק היכן הם יופיעו ואיך ייראו. -->
 <script
   id="imgbb-src"
   async
