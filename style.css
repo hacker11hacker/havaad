@@ -197,6 +197,12 @@ header, main, footer, .modal-overlay { position: relative; z-index: 1; }
   margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line);
 }
 .item-card-owner { font-size: 12.5px; color: var(--ink-faint); }
+.item-card-links { display: flex; flex-direction: column; gap: 4px; }
+.item-card-link {
+  font-size: 12.5px; color: var(--indigo-dark);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.item-card-link:hover { text-decoration: underline; }
 
 /* ===========================================================
    Rating ring — signature element

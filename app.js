@@ -202,14 +202,31 @@ function renderFeed() {
       ? '<img class="item-card-thumb" src="' + escapeAttr(item.images[0]) + '" alt="" referrerpolicy="no-referrer" loading="lazy">'
       : '';
 
+        const cardLinksHtml = (item.links && item.links.length)
+      ? '<div class="item-card-links">' + item.links.map(l =>
+          '<a href="' + escapeAttr(l) + '" target="_blank" rel="noopener noreferrer" class="item-card-link">🔗 ' + escapeHtml(l) + '</a>'
+        ).join('') + '</div>'
+      : '';
+
+        const cardLinksHtml = (item.links && item.links.length)
+      ? '<div class="item-card-links">' + item.links.map(l =>
+          '<a href="' + escapeAttr(l) + '" target="_blank" rel="noopener noreferrer" class="item-card-link">🔗 ' + escapeHtml(l) + '</a>'
+        ).join('') + '</div>'
+      : '';
+
     card.innerHTML =
       thumb +
       '<h3 class="item-card-title">' + escapeHtml(item.title) + '</h3>' +
       '<p class="item-card-desc">' + escapeHtml(item.description || '') + '</p>' +
+      cardLinksHtml +
       '<div class="item-card-footer">' +
         '<span class="item-card-owner">מאת ' + escapeHtml(item.ownerName || 'אלמוני') + '</span>' +
         ratingRingHtml(item.avgRating, item.reviewCount, 42) +
       '</div>';
+
+    card.querySelectorAll('.item-card-link').forEach(a => {
+      a.addEventListener('click', (e) => e.stopPropagation());
+    });
 
     card.addEventListener('click', () => openItemDetail(item.itemId));
     card.addEventListener('keydown', (e) => { if (e.key === 'Enter') openItemDetail(item.itemId); });
