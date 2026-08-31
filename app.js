@@ -204,13 +204,7 @@ function renderFeed() {
 
         const cardLinksHtml = (item.links && item.links.length)
       ? '<div class="item-card-links">' + item.links.map(l =>
-          '<a href="' + escapeAttr(l) + '" target="_blank" rel="noopener noreferrer" class="item-card-link">🔗 ' + escapeHtml(l) + '</a>'
-        ).join('') + '</div>'
-      : '';
-
-        const cardLinksHtml = (item.links && item.links.length)
-      ? '<div class="item-card-links">' + item.links.map(l =>
-          '<a href="' + escapeAttr(l) + '" target="_blank" rel="noopener noreferrer" class="item-card-link">🔗 ' + escapeHtml(l) + '</a>'
+          '<a href="' + escapeAttr(l) + '" target="_blank" rel="noopener noreferrer" class="item-card-link">' + escapeHtml(l) + '</a>'
         ).join('') + '</div>'
       : '';
 
