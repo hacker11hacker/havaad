@@ -24,6 +24,14 @@ let currentStars = 0;
 let pendingImages = [];       // תמונות עבור יצירת פריט חדש
 let pendingReviewImages = []; // תמונות עבור ביקורת
 
+let reconcileTimer = null;
+// כל פעולה מקומית (יצירה/ביקורת/לייק/מחיקה) מוצגת מיד באתר, ורק אחרי 10 שניות
+// נשלפים הנתונים מחדש מגוגל סקריפט כדי לוודא שהפעולה באמת נקלטה שם.
+function scheduleReconcile() {
+  clearTimeout(reconcileTimer);
+  reconcileTimer = setTimeout(() => { loadAllData(); }, 10000);
+}
+
 /* ===========================================================
    עזר: קריאות לשרת
    =========================================================== */
@@ -127,6 +135,7 @@ function renderAuthArea() {
    טעינה מלאה - פריטים + ביקורות + לייקים, הכל בבת אחת
    =========================================================== */
 async function loadAllData() {
+  clearTimeout(reconcileTimer);
   const loadingEl = document.getElementById('feed-loading');
   try {
     const data = await api('getAllData', { key: state.key || '' });
@@ -296,10 +305,15 @@ function renderReviewsList(reviews) {
     const imagesHtml = (r.images && r.images.length)
       ? '<div class="review-images">' + r.images.map(u => '<img src="' + escapeAttr(u) + '" alt="" referrerpolicy="no-referrer">').join('') + '</div>'
       : '';
+    const thumbSvg =
+      '<svg viewBox="0 0 24 24" width="16" height="16" fill="' + (r.myLiked ? 'currentColor' : 'none') + '" ' +
+        'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>' +
+      '</svg>';
     const likeBtn =
       '<button type="button" class="like-btn' + (r.myLiked ? ' liked' : '') + '" data-review-id="' + escapeAttr(r.reviewId) + '"' +
       (r.canLike ? '' : ' disabled title="לא ניתן לסמן לייק לביקורת שלך, או שצריך להתחבר"') + '>' +
-        (r.myLiked ? '♥' : '♡') + (r.likeCount ? ' ' + r.likeCount : '') +
+        thumbSvg + (r.likeCount ? '<span>' + r.likeCount + '</span>' : '') +
       '</button>';
 
     return (
@@ -358,41 +372,94 @@ async function submitReview(itemId) {
     return;
   }
   const comment = document.getElementById('review-comment').value.trim();
-  const btn = document.getElementById('btn-submit-review');
-  btn.disabled = true;
+  const images = pendingReviewImages.slice();
+  const item = allItems[itemId];
+  if (!item) return;
+
+  // --- עדכון אופטימי: מציגים מיד, לפני שהשרת בכלל ענה ---
+  const snapshot = JSON.parse(JSON.stringify(item));
+  const existingId = item.myReview && item.myReview.reviewId;
+  const optimisticReview = {
+    reviewId: existingId || ('temp-' + Date.now()),
+    reviewerName: state.name || 'אני',
+    reviewerPicture: state.picture || '',
+    stars: currentStars,
+    comment: comment,
+    images: images,
+    createdAt: new Date().toISOString(),
+    likeCount: 0,
+    myLiked: false,
+    canLike: false
+  };
+  const idx = existingId ? item.reviews.findIndex(r => r.reviewId === existingId) : -1;
+  if (idx !== -1) item.reviews[idx] = optimisticReview;
+  else item.reviews.unshift(optimisticReview);
+  item.myReview = { reviewId: optimisticReview.reviewId, stars: currentStars, comment: comment, images: images };
+  const sum = item.reviews.reduce((s, r) => s + r.stars, 0);
+  item.avgRating = sum / item.reviews.length;
+  item.reviewCount = item.reviews.length;
+
+  renderFeed();
+  renderItemDetail(item);
+  showToast('הביקורת נשלחה');
+
   try {
-    await api('addReview', {
-      key: state.key, itemId: itemId, stars: currentStars, comment: comment, images: pendingReviewImages
-    });
-    showToast('הביקורת נשלחה, תודה!');
-    await loadAllData();
+    await api('addReview', { key: state.key, itemId: itemId, stars: currentStars, comment: comment, images: images });
   } catch (err) {
-    errEl.textContent = err.message;
-    errEl.hidden = false;
-  } finally {
-    btn.disabled = false;
+    allItems[itemId] = snapshot;
+    renderFeed();
+    if (currentOpenItemId === itemId) renderItemDetail(allItems[itemId]);
+    showToast(err.message, true);
   }
+  scheduleReconcile();
 }
 
 async function toggleLike(reviewId) {
   if (!state.key) { showToast('צריך להתחבר עם Google כדי לסמן לייק', true); return; }
+  const item = currentOpenItemId && allItems[currentOpenItemId];
+  if (!item) return;
+  const review = item.reviews.find(r => r.reviewId === reviewId);
+  if (!review || !review.canLike) return;
+
+  const snapshot = { myLiked: review.myLiked, likeCount: review.likeCount };
+  review.myLiked = !review.myLiked;
+  review.likeCount += review.myLiked ? 1 : -1;
+  renderItemDetail(item);
+
   try {
     await api('toggleLike', { key: state.key, reviewId: reviewId });
-    await loadAllData();
   } catch (err) {
+    review.myLiked = snapshot.myLiked;
+    review.likeCount = snapshot.likeCount;
+    if (currentOpenItemId === item.itemId) renderItemDetail(item);
     showToast(err.message, true);
   }
+  scheduleReconcile();
 }
 
 async function deleteItem(itemId) {
   if (!confirm('למחוק את העבודה? הפעולה בלתי הפיכה, וכל הביקורות עליה יימחקו גם כן.')) return;
+
+  const snapshotItem = allItems[itemId];
+  const snapshotIdx = itemOrder.indexOf(itemId);
+  delete allItems[itemId];
+  itemOrder = itemOrder.filter(id => id !== itemId);
+  closeModal('modal-item');
+  renderFeed();
+  showToast('העבודה נמחקה');
+
   try {
     await api('deleteItem', { key: state.key, itemId: itemId });
-    showToast('העבודה נמחקה');
-    closeModal('modal-item');
-    await loadAllData();
+    scheduleReconcile();
   } catch (err) {
+    // מחיקה נכשלה - משחזרים מיד את המצב האמיתי מהשרת, לא מחכים 10 שניות
+    if (snapshotItem) {
+      allItems[itemId] = snapshotItem;
+      itemOrder.splice(snapshotIdx, 0, itemId);
+      renderFeed();
+    }
     showToast(err.message, true);
+    loadAllData();
   }
 }
 
@@ -481,23 +548,31 @@ async function submitCreateForm(e) {
     errEl.hidden = false;
     return;
   }
-  const btn = document.getElementById('btn-submit-create');
-  btn.disabled = true;
+  const links = collectLinks();
+  const images = pendingImages.slice();
+
+  // --- עדכון אופטימי: מוסיפים לפיד מיד עם מזהה זמני, לפני תשובת השרת ---
+  const tempId = 'temp-' + Date.now();
+  allItems[tempId] = {
+    itemId: tempId, ownerName: state.name || 'אני', title: title, description: description,
+    links: links, images: images, createdAt: new Date().toISOString(),
+    isOwner: true, myReview: null, avgRating: 0, reviewCount: 0, reviews: []
+  };
+  itemOrder.unshift(tempId);
+  renderFeed();
+  closeModal('modal-create');
+  resetCreateForm();
+  showToast('העבודה הוגשה לוועד!');
+
   try {
-    await api('createItem', {
-      key: state.key, title: title, description: description,
-      links: collectLinks(), images: pendingImages
-    });
-    showToast('העבודה הוגשה לוועד!');
-    closeModal('modal-create');
-    resetCreateForm();
-    await loadAllData();
+    await api('createItem', { key: state.key, title: title, description: description, links: links, images: images });
   } catch (err) {
-    errEl.textContent = err.message;
-    errEl.hidden = false;
-  } finally {
-    btn.disabled = false;
+    delete allItems[tempId];
+    itemOrder = itemOrder.filter(id => id !== tempId);
+    renderFeed();
+    showToast(err.message, true);
   }
+  scheduleReconcile();
 }
 
 /* ===========================================================

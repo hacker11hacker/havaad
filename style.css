@@ -142,6 +142,8 @@ header, main, footer, .modal-overlay { position: relative; z-index: 1; }
 .btn-ghost { background: var(--card); color: var(--ink); border-color: var(--line-strong); }
 .btn-ghost:hover { border-color: var(--indigo); color: var(--indigo); }
 .btn-line { border: 1.3px solid var(--line-strong); background: transparent; color: var(--ink-soft); }
+.btn-danger { border: 1.3px solid var(--danger); background: transparent; color: var(--danger); }
+.btn-danger:hover { background: var(--danger); color: #fff; }
 .btn-small { padding: 8px 14px; font-size: 13px; }
 .btn-block { width: 100%; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
@@ -162,12 +164,13 @@ header, main, footer, .modal-overlay { position: relative; z-index: 1; }
 }
 
 .feed-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 22px;
+  column-width: 280px;
+  column-gap: 22px;
 }
 
 .item-card {
+  break-inside: avoid;
+  margin-bottom: 22px;
   background: var(--card);
   border: 1.3px solid var(--line);
   border-radius: var(--radius);
@@ -344,10 +347,10 @@ header, main, footer, .modal-overlay { position: relative; z-index: 1; }
 .like-btn {
   display: inline-flex; align-items: center; gap: 5px;
   border: 1.3px solid var(--line-strong); background: var(--card); color: var(--ink-faint);
-  border-radius: var(--radius-pill); padding: 5px 13px; font-size: 15px; font-weight: 600;
+  border-radius: var(--radius-pill); padding: 6px 13px; font-size: 12.5px; font-weight: 600;
 }
-.like-btn:hover:not(:disabled) { border-color: #E24C7A; color: #E24C7A; }
-.like-btn.liked { border-color: #E24C7A; background: rgba(226,76,122,0.08); color: #E24C7A; }
+.like-btn:hover:not(:disabled) { border-color: var(--indigo); color: var(--indigo); }
+.like-btn.liked { border-color: var(--indigo); background: rgba(91,84,232,0.08); color: var(--indigo); }
 .like-btn:disabled { opacity: 0.45; cursor: default; }
 
 /* ===========================================================
