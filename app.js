@@ -238,7 +238,7 @@ function renderItemDetail(item) {
   const el = document.getElementById('item-detail-content');
 
   const imagesHtml = (item.images && item.images.length)
-    ? '<div class="detail-images">' + item.images.map(u => '<img src="' + escapeAttr(u) + '" alt="" referrerpolicy="no-referrer">').join('') + '</div>'
+    ? '<div class="detail-images">' + item.images.map(u => '<img class="clickable-img" src="' + escapeAttr(u) + '" alt="" referrerpolicy="no-referrer">').join('') + '</div>'
     : '';
 
   const linksHtml = (item.links && item.links.length)
@@ -253,6 +253,13 @@ function renderItemDetail(item) {
     linksHtml +
     '<div class="detail-rating-summary">' + ratingRingHtml(item.avgRating, item.reviewCount, 56) + '</div>';
 
+  // כפתור מחיקת עבודה - נפרד לגמרי מהודעת "לא ניתן לבקר על העבודה שלך"
+  const ownerActions = document.getElementById('owner-actions');
+  ownerActions.hidden = !item.isOwner;
+  if (item.isOwner) {
+    document.getElementById('btn-delete-item').onclick = () => deleteItem(item.itemId);
+  }
+
   // אזור כתיבת/עדכון ביקורת - אלמנטים סטטיים, רק מציגים/מסתירים ומעדכנים תוכן
   const reviewBox = document.getElementById('review-form-box');
   const signinNote = document.getElementById('signin-note');
@@ -263,7 +270,6 @@ function renderItemDetail(item) {
     signinNote.hidden = false;
   } else if (item.isOwner) {
     ownerNote.hidden = false;
-    document.getElementById('btn-delete-item').onclick = () => deleteItem(item.itemId);
   } else {
     reviewBox.hidden = false;
     const my = item.myReview || null;
@@ -275,7 +281,7 @@ function renderItemDetail(item) {
     document.getElementById('btn-submit-review').textContent = my ? 'עדכן ביקורת' : 'שלח ביקורת';
     document.getElementById('review-error').hidden = true;
     renderStarPicker(currentStars);
-    renderImagePreviews('review-image-previews', pendingReviewImages);
+    renderImagePreviews('review-image-previews', pendingReviewImages, false);
     const btn = document.getElementById('btn-submit-review');
     btn.disabled = false;
     btn.onclick = () => submitReview(item.itemId);
@@ -290,8 +296,21 @@ function renderItemDetail(item) {
   document.getElementById('reviews-list').innerHTML = renderReviewsList(reviews);
 
   document.querySelectorAll('.like-btn').forEach(btn => {
-    btn.addEventListener('click', () => toggleLike(btn.dataset.reviewId));
+    btn.addEventListener('click', () => reactToReview(btn.dataset.reviewId, btn.dataset.type));
   });
+  document.querySelectorAll('[data-delete-review-id]').forEach(btn => {
+    btn.addEventListener('click', () => deleteReview(btn.dataset.deleteReviewId));
+  });
+}
+
+function thumbSvg(direction, filled) {
+  const rotate = direction === 'down' ? ' style="transform:rotate(180deg)"' : '';
+  return (
+    '<svg viewBox="0 0 24 24" width="15" height="15" fill="' + (filled ? 'currentColor' : 'none') + '" ' +
+      'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"' + rotate + '>' +
+      '<path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>' +
+    '</svg>'
+  );
 }
 
 function renderReviewsList(reviews) {
@@ -303,18 +322,22 @@ function renderReviewsList(reviews) {
       ? '<img class="review-avatar" src="' + escapeAttr(r.reviewerPicture) + '" alt="" referrerpolicy="no-referrer">'
       : '<span class="review-avatar-fallback">' + escapeHtml((r.reviewerName || '?').charAt(0)) + '</span>';
     const imagesHtml = (r.images && r.images.length)
-      ? '<div class="review-images">' + r.images.map(u => '<img src="' + escapeAttr(u) + '" alt="" referrerpolicy="no-referrer">').join('') + '</div>'
+      ? '<div class="review-images">' + r.images.map(u => '<img class="clickable-img" src="' + escapeAttr(u) + '" alt="" referrerpolicy="no-referrer">').join('') + '</div>'
       : '';
-    const thumbSvg =
-      '<svg viewBox="0 0 24 24" width="16" height="16" fill="' + (r.myLiked ? 'currentColor' : 'none') + '" ' +
-        'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-        '<path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>' +
-      '</svg>';
+
     const likeBtn =
-      '<button type="button" class="like-btn' + (r.myLiked ? ' liked' : '') + '" data-review-id="' + escapeAttr(r.reviewId) + '"' +
-      (r.canLike ? '' : ' disabled title="לא ניתן לסמן לייק לביקורת שלך, או שצריך להתחבר"') + '>' +
-        thumbSvg + (r.likeCount ? '<span>' + r.likeCount + '</span>' : '') +
+      '<button type="button" class="like-btn' + (r.myReaction === 'like' ? ' liked' : '') + '" data-review-id="' + escapeAttr(r.reviewId) + '" data-type="like"' +
+      (r.canReact ? '' : ' disabled title="לא ניתן להגיב לביקורת שלך, או שצריך להתחבר"') + '>' +
+        thumbSvg('up', r.myReaction === 'like') + (r.likeCount ? '<span>' + r.likeCount + '</span>' : '') +
       '</button>';
+    const dislikeBtn =
+      '<button type="button" class="like-btn dislike-btn' + (r.myReaction === 'dislike' ? ' liked' : '') + '" data-review-id="' + escapeAttr(r.reviewId) + '" data-type="dislike"' +
+      (r.canReact ? '' : ' disabled title="לא ניתן להגיב לביקורת שלך, או שצריך להתחבר"') + '>' +
+        thumbSvg('down', r.myReaction === 'dislike') + (r.dislikeCount ? '<span>' + r.dislikeCount + '</span>' : '') +
+      '</button>';
+    const deleteBtn = r.isMine
+      ? '<button type="button" class="delete-review-btn" data-delete-review-id="' + escapeAttr(r.reviewId) + '">מחק ביקורת</button>'
+      : '';
 
     return (
       '<div class="review-item">' +
@@ -328,7 +351,7 @@ function renderReviewsList(reviews) {
         '<div class="review-stars">' + stars + '</div>' +
         (r.comment ? '<p class="review-comment">' + escapeHtml(r.comment) + '</p>' : '') +
         imagesHtml +
-        likeBtn +
+        '<div class="review-actions"><span class="reaction-group">' + likeBtn + dislikeBtn + '</span>' + deleteBtn + '</div>' +
       '</div>'
     );
   }).join('');
@@ -388,8 +411,10 @@ async function submitReview(itemId) {
     images: images,
     createdAt: new Date().toISOString(),
     likeCount: 0,
-    myLiked: false,
-    canLike: false
+    dislikeCount: 0,
+    myReaction: null,
+    canReact: false,
+    isMine: true
   };
   const idx = existingId ? item.reviews.findIndex(r => r.reviewId === existingId) : -1;
   if (idx !== -1) item.reviews[idx] = optimisticReview;
@@ -414,24 +439,59 @@ async function submitReview(itemId) {
   scheduleReconcile();
 }
 
-async function toggleLike(reviewId) {
-  if (!state.key) { showToast('צריך להתחבר עם Google כדי לסמן לייק', true); return; }
+async function reactToReview(reviewId, type) {
+  if (!state.key) { showToast('צריך להתחבר עם Google כדי להגיב', true); return; }
   const item = currentOpenItemId && allItems[currentOpenItemId];
   if (!item) return;
   const review = item.reviews.find(r => r.reviewId === reviewId);
-  if (!review || !review.canLike) return;
+  if (!review || !review.canReact) return;
 
-  const snapshot = { myLiked: review.myLiked, likeCount: review.likeCount };
-  review.myLiked = !review.myLiked;
-  review.likeCount += review.myLiked ? 1 : -1;
+  const snapshot = { myReaction: review.myReaction, likeCount: review.likeCount, dislikeCount: review.dislikeCount };
+  const prev = review.myReaction;
+  if (prev === type) {
+    review.myReaction = null;
+    if (type === 'like') review.likeCount--; else review.dislikeCount--;
+  } else {
+    if (prev === 'like') review.likeCount--;
+    if (prev === 'dislike') review.dislikeCount--;
+    review.myReaction = type;
+    if (type === 'like') review.likeCount++; else review.dislikeCount++;
+  }
   renderItemDetail(item);
 
   try {
-    await api('toggleLike', { key: state.key, reviewId: reviewId });
+    await api('reactToReview', { key: state.key, reviewId: reviewId, type: type });
   } catch (err) {
-    review.myLiked = snapshot.myLiked;
+    review.myReaction = snapshot.myReaction;
     review.likeCount = snapshot.likeCount;
+    review.dislikeCount = snapshot.dislikeCount;
     if (currentOpenItemId === item.itemId) renderItemDetail(item);
+    showToast(err.message, true);
+  }
+  scheduleReconcile();
+}
+
+async function deleteReview(reviewId) {
+  if (!confirm('למחוק את הביקורת שלך?')) return;
+  const item = currentOpenItemId && allItems[currentOpenItemId];
+  if (!item) return;
+
+  const snapshot = JSON.parse(JSON.stringify(item));
+  item.reviews = item.reviews.filter(r => r.reviewId !== reviewId);
+  item.myReview = null;
+  const sum = item.reviews.reduce((s, r) => s + r.stars, 0);
+  item.avgRating = item.reviews.length ? sum / item.reviews.length : 0;
+  item.reviewCount = item.reviews.length;
+  renderFeed();
+  renderItemDetail(item);
+  showToast('הביקורת נמחקה');
+
+  try {
+    await api('deleteReview', { key: state.key, reviewId: reviewId });
+  } catch (err) {
+    allItems[item.itemId] = snapshot;
+    renderFeed();
+    if (currentOpenItemId === item.itemId) renderItemDetail(allItems[item.itemId]);
     showToast(err.message, true);
   }
   scheduleReconcile();
@@ -487,26 +547,45 @@ function collectLinks() {
 /* ===========================================================
    תצוגה מקדימה כללית לתמונות (משמש גם ליצירת פריט וגם לביקורת)
    =========================================================== */
-function renderImagePreviews(containerId, imagesArray) {
+function renderImagePreviews(containerId, imagesArray, allowPrimary) {
   const box = document.getElementById(containerId);
-  box.innerHTML = imagesArray.map((url, idx) =>
-    '<div class="image-preview">' +
-      '<img src="' + escapeAttr(url) + '" alt="" referrerpolicy="no-referrer">' +
-      '<button type="button" data-idx="' + idx + '" aria-label="הסר תמונה">✕</button>' +
-    '</div>'
-  ).join('');
-  box.querySelectorAll('button').forEach(btn => {
+  box.innerHTML = imagesArray.map((url, idx) => {
+    const isPrimary = allowPrimary && idx === 0;
+    const primaryUi = !allowPrimary ? '' : (
+      isPrimary
+        ? '<span class="primary-badge">ראשית</span>'
+        : '<button type="button" class="set-primary" data-idx="' + idx + '">הפוך לראשית</button>'
+    );
+    return (
+      '<div class="image-preview' + (isPrimary ? ' is-primary' : '') + '">' +
+        '<img src="' + escapeAttr(url) + '" alt="" referrerpolicy="no-referrer">' +
+        '<button type="button" class="remove-img" data-remove-idx="' + idx + '" aria-label="הסר תמונה">✕</button>' +
+        primaryUi +
+      '</div>'
+    );
+  }).join('');
+  box.querySelectorAll('.remove-img').forEach(btn => {
     btn.addEventListener('click', () => {
-      imagesArray.splice(Number(btn.dataset.idx), 1);
-      renderImagePreviews(containerId, imagesArray);
+      imagesArray.splice(Number(btn.dataset.removeIdx), 1);
+      renderImagePreviews(containerId, imagesArray, allowPrimary);
     });
   });
+  if (allowPrimary) {
+    box.querySelectorAll('.set-primary').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = Number(btn.dataset.idx);
+        const chosen = imagesArray.splice(idx, 1)[0];
+        imagesArray.unshift(chosen);
+        renderImagePreviews(containerId, imagesArray, allowPrimary);
+      });
+    });
+  }
 }
 
 // ה-widget של imgbb כותב HTML (data-auto-insert="html-embed-full") לתוך הטקסטאריה המוסתרת
 // המתאימה, לכל תמונה שהועלתה. שולפים משם את כתובות ה-URL ומרוקנים את הטקסטאריה
 // כדי שהעלאה הבאה תתחיל נקי.
-function setupImageWatcher(textareaId, imagesArray, previewsContainerId) {
+function setupImageWatcher(textareaId, imagesArray, previewsContainerId, allowPrimary) {
   const ta = document.getElementById(textareaId);
   if (!ta) return;
   ta.addEventListener('input', () => {
@@ -516,7 +595,7 @@ function setupImageWatcher(textareaId, imagesArray, previewsContainerId) {
       if (m[1] && !imagesArray.includes(m[1])) { imagesArray.push(m[1]); added = true; }
     }
     ta.value = '';
-    renderImagePreviews(previewsContainerId, imagesArray);
+    renderImagePreviews(previewsContainerId, imagesArray, allowPrimary);
     if (added) {
       showToast('התמונה נוספה בהצלחה');
       window.focus();
@@ -529,7 +608,7 @@ function resetCreateForm() {
   document.getElementById('links-list').innerHTML = '';
   addLinkRow('');
   pendingImages.length = 0;
-  renderImagePreviews('image-previews', pendingImages);
+  renderImagePreviews('image-previews', pendingImages, true);
   document.getElementById('create-error').hidden = true;
 }
 
@@ -574,6 +653,16 @@ async function submitCreateForm(e) {
   }
   scheduleReconcile();
 }
+
+/* ===========================================================
+   תצוגה מקדימה גדולה לתמונות (Lightbox)
+   =========================================================== */
+document.addEventListener('click', (e) => {
+  const img = e.target.closest('.clickable-img');
+  if (!img) return;
+  document.getElementById('lightbox-img').src = img.src;
+  openModal('modal-lightbox');
+});
 
 /* ===========================================================
    מודלים
@@ -624,7 +713,7 @@ function escapeAttr(str) { return escapeHtml(str); }
    אתחול
    =========================================================== */
 addLinkRow('');
-setupImageWatcher('imgbb-target', pendingImages, 'image-previews');
-setupImageWatcher('imgbb-target-review', pendingReviewImages, 'review-image-previews');
+setupImageWatcher('imgbb-target', pendingImages, 'image-previews', true);
+setupImageWatcher('imgbb-target-review', pendingReviewImages, 'review-image-previews', false);
 initGoogleAuth();
 loadAllData();

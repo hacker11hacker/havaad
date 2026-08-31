@@ -69,6 +69,10 @@
 
     <div id="item-detail-content"></div>
 
+    <div class="owner-actions" id="owner-actions" hidden>
+      <button type="button" class="btn btn-danger btn-small" id="btn-delete-item">מחק את העבודה</button>
+    </div>
+
     <!-- אלמנטים סטטיים (לא נוצרים מחדש) כדי שהווידג'ט של imgbb יוכל להיקשר אליהם פעם אחת בטעינת העמוד -->
     <div class="review-form-box" id="review-form-box" hidden>
       <p class="review-form-title" id="review-form-title">כתיבת ביקורת</p>
@@ -86,10 +90,7 @@
       <button class="btn btn-primary btn-block" id="btn-submit-review">שלח ביקורת</button>
     </div>
     <p class="signin-note" id="signin-note" hidden>צריך להתחבר עם Google כדי לכתוב ביקורת.</p>
-    <div class="owner-note" id="owner-note" hidden>
-      <p>זו העבודה שלך — אי אפשר לבקר על עבודה שהעלית בעצמך.</p>
-      <button type="button" class="btn btn-danger btn-small" id="btn-delete-item">מחק את העבודה</button>
-    </div>
+    <p class="owner-note" id="owner-note" hidden>זו העבודה שלך — אי אפשר לבקר על עבודה שהעלית בעצמך.</p>
 
     <hr class="divider" id="reviews-divider" hidden>
     <p class="reviews-title" id="reviews-title" hidden></p>
@@ -126,6 +127,14 @@
       <p class="form-error" id="create-error" hidden></p>
       <button type="submit" class="btn btn-primary btn-block" id="btn-submit-create">הגש לוועד</button>
     </form>
+  </div>
+</div>
+
+<!-- ===== Modal: Image lightbox ===== -->
+<div class="modal-overlay" id="modal-lightbox" hidden>
+  <div class="lightbox-inner">
+    <button class="modal-close" data-close="modal-lightbox" aria-label="סגור">✕</button>
+    <img id="lightbox-img" src="" alt="" referrerpolicy="no-referrer">
   </div>
 </div>
 
